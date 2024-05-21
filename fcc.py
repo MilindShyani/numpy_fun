@@ -6,14 +6,14 @@ class FCC:
         self.weights = []
         self.biases = []        
         for dim_in, dim_out in zip(dims,dims[1:]):
-            W = np.random.uniform(size=(dim_in,dim_out))/np.sqrt(dim_out)
+            W = np.random.uniform(low = -1, high = 1, size=(dim_in,dim_out))/np.sqrt(dim_out)
             b = np.zeros(dim_out)
             self.weights.append(W)
             self.biases.append(b) 
         self.a = []       
         self.z = []
         self.dA = []
-        self.db = []
+        self.dB = []
         self.dW = []
 
     def sigmoid(self, x: Union[np.ndarray,float]) -> Union[np.ndarray,float]:
@@ -34,7 +34,7 @@ class FCC:
         self.z.append(x)                
         x = self.sigmoid(x)
         self.a.append(x)
-                            
+
         return x
     
     def reluback(self,x):
@@ -42,51 +42,55 @@ class FCC:
 
     def backward(self,grad: np.ndarray) -> None:
         self.dW = []
-        self.dA = []        
-        # assert grad.shape == (b,1)
-        # self.da.append(grad)
-        # temp_grad = np.sum(grad*self.a[-1]*(1-self.a[-1]) * self.a[-2],axis=0,keepdims=True).T
-        dz = grad*self.a[-1]*(1-self.a[-1]) 
-        # dw = np.sum(dz*self.a[-2], axis=0)
+        self.dA = []
+        self.dB = []                                
+        self.dA.append(grad)
+
+        dz = self.dA[-1]*self.a[-1]*(1-self.a[-1]) 
         
         dw =  self.a[-2].T @ dz
         da = dz @ self.weights[-1].T
+        db =  np.sum(dz,0)
 
         self.dW.append(dw)
-        self.dA.append(da)
-        
-        
-        for i in range(2,len(self.weights)+1):
-            for el in reversed(self.dA):
-                print(el.shape)               
-            print(f'a shape: {self.a[-i+1].shape} and i = {i} and {self.dA[-i+1].shape}') 
-            dz = self.dA[-i+1]*self.reluback(self.a[-i+1])
+        self.dB.append(db)
+        self.dA = [da] + self.dA
+                
+        for i in range(2,len(self.weights)+1):                                    
+            dz = self.dA[-i]*self.reluback(self.a[-i])
+
             dw = self.a[-i-1].T @ dz            
             da = dz @ self.weights[-i].T
-            print(dz.shape, dw.shape,da.shape)
-            self.dW = [dw] + self.dW
-            self.dA = [da]+ self.dA
-            print("Next")
+            db = np.sum(dz,axis=0) 
             
+            self.dW = [dw] + self.dW
+            self.dA = [da] + self.dA
+            self.dB = [db] + self.dB
+                        
         return
     
-    def update(self,lr: float = 1e-3 ) -> None:
+    def update(self,lr: float = 1e-2 ) -> None:
         for i in range(len(self.weights)):
-            self.weights[i] += lr*self.dW[i]
+            assert self.weights[i].shape == self.dW[i].shape
+            self.weights[i] -= lr*self.dW[i]
+            # print(f'{np.linalg.norm(self.weights[i])} and grad {np.linalg.norm(self.dW[i])}')
+        # print("next")
         
 
 
-X = np.random.normal(0,1,size=(100,20))            
-mymodel = FCC([20,15,10,5,1])
-coeff = np.random.normal(1,0.01,size=(1,20))
+X = np.random.normal(0,1,size=(1000,20))            
+mymodel = FCC([20,8,5,1])
+# coeff = np.random.normal(1,0.01,size=(1,20))
+coeff = np.ones((1,20)) + 3
 targets = X @ coeff.T + 2
-for step in range(100):
+for step in range(150):
     out = mymodel.forward(X)
-    loss = (out - targets)**2
-    dloss = 2*(out - targets)*out
+    loss = ((out - targets)**2)
+    dloss = 2*(out - targets)/X.shape[0]
     mymodel.backward(dloss)
     mymodel.update()
-    print(np.sum(loss))
+    if not step % 1:
+        print(np.mean(loss))
 
 
 
