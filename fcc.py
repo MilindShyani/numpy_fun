@@ -4,17 +4,26 @@ from typing import Union
 class FCC:
     def __init__(self, dims: list) -> None:
         self.weights = []
-        self.biases = []        
+        self.biases = []
+        self.gammas = []        
+        self.betas = []
         for dim_in, dim_out in zip(dims,dims[1:]):
             W = np.random.uniform(low = -1, high = 1, size=(dim_in,dim_out))/np.sqrt(dim_out)
             b = np.zeros(dim_out)
+            gamma = np.ones(dim_out)
+            beta = np.zeros(dim_out)
             self.weights.append(W)
             self.biases.append(b) 
+            self.betas.append(beta)
+            self.gammas.append(gamma)
+            
         self.a = []       
         self.z = []
         self.dA = []
         self.dB = []
         self.dW = []
+        self.dG = []
+        self.dBT = []
 
     def sigmoid(self, x: Union[np.ndarray,float]) -> Union[np.ndarray,float]:
         return 1/(1+np.exp(-x))            
@@ -25,7 +34,8 @@ class FCC:
         self.a.append(x)
         for W,b in zip(self.weights[:-1],self.biases[:-1]):
             x = x @ W + b
-            self.z.append(x)                
+            self.z.append(x)    
+                        
             x = np.where(x>=0,x,0)
             self.a.append(x)
 
