@@ -52,7 +52,7 @@ class FCC:
         self.dW = []                
 
     def sigmoid(self, x: Union[np.ndarray,float]) -> Union[np.ndarray,float]:
-        return 1/(1+np.exp(-x))            
+        return 1/(1+np.exp(-x))                    
     
     def forward(self,x: np.ndarray) -> np.ndarray:
         assert len(x.shape) > 1
@@ -75,6 +75,10 @@ class FCC:
     
     def reluback(self,x):
         return np.where(x>=0,1,0)
+    
+    def sigmoidback(self,x):
+        return x*(1-x)
+        
 
     def backward(self,grad: np.ndarray) -> None:
         self.dW = []
@@ -82,7 +86,7 @@ class FCC:
         self.dB = []                                
         self.dA.append(grad)
 
-        dz = self.dA[-1]*self.a[-1]*(1-self.a[-1]) 
+        dz = self.dA[-1]*self.sigmoidback(self.a[-1])
         
         dw =  self.a[-2].T @ dz
         da = dz @ self.weights[-1].T
@@ -122,7 +126,7 @@ X = np.random.normal(0,1,size=(1000,20))
 mymodel = FCC([20,8,5,1])
 coeff = np.random.normal(1,0.01,size=(1,20))
 # coeff = np.ones((1,20)) + 3
-targets = X @ coeff.T + 2
+targets = np.tanh(X @ coeff.T + 2)
 for step in range(15000):
     out = mymodel.forward(X)
     loss = ((out - targets)**2)
